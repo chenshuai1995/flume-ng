@@ -91,6 +91,7 @@ public class ChannelProcessor implements Configurable {
     if (interceptorListStr.isEmpty()) {
       return;
     }
+    // 多个interceptor
     String[] interceptorNames = interceptorListStr.split("\\s+");
 
     Context interceptorContexts =
@@ -98,7 +99,7 @@ public class ChannelProcessor implements Configurable {
 
     // run through and instantiate all the interceptors specified in the Context
     InterceptorBuilderFactory factory = new InterceptorBuilderFactory();
-    for (String interceptorName : interceptorNames) {
+    for (String interceptorName : interceptorNames) {// 遍历多个interceptor
       Context interceptorContext = new Context(
           interceptorContexts.getSubProperties(interceptorName + "."));
       String type = interceptorContext.getString("type");
@@ -110,7 +111,7 @@ public class ChannelProcessor implements Configurable {
       try {
         Interceptor.Builder builder = factory.newInstance(type);
         builder.configure(interceptorContext);
-        interceptors.add(builder.build());
+        interceptors.add(builder.build());// 将每个interceptor加入interceptors列表
       } catch (ClassNotFoundException e) {
         LOG.error("Builder class not found. Exception follows.", e);
         throw new FlumeException("Interceptor.Builder not found.", e);
@@ -122,7 +123,7 @@ public class ChannelProcessor implements Configurable {
         throw new FlumeException("Unable to access Interceptor.Builder.", e);
       }
     }
-
+    // 把interceptor列表保存到interceptorChain里
     interceptorChain.setInterceptors(interceptors);
   }
 
@@ -145,6 +146,7 @@ public class ChannelProcessor implements Configurable {
   public void processEventBatch(List<Event> events) {
     Preconditions.checkNotNull(events, "Event list must not be null");
 
+    // 调用配置的拦截器处理events
     events = interceptorChain.intercept(events);
 
     Map<Channel, List<Event>> reqChannelQueue =
@@ -154,6 +156,7 @@ public class ChannelProcessor implements Configurable {
         new LinkedHashMap<Channel, List<Event>>();
 
     for (Event event : events) {
+      // 根据selector拿到这批events对应的Channel
       List<Channel> reqChannels = selector.getRequiredChannels(event);
 
       for (Channel ch : reqChannels) {
@@ -180,20 +183,22 @@ public class ChannelProcessor implements Configurable {
 
     // Process required channels
     for (Channel reqChannel : reqChannelQueue.keySet()) {
+      // 拿到channel中的transaction事务，调用的是BasicChannelSemantics.getTransaction()
       Transaction tx = reqChannel.getTransaction();
       Preconditions.checkNotNull(tx, "Transaction object must not be null");
       try {
-        tx.begin();
+        tx.begin();// 开启事务
 
         List<Event> batch = reqChannelQueue.get(reqChannel);
 
         for (Event event : batch) {
+          // 把event先放到channel中，基于channel做事务管理
           reqChannel.put(event);
         }
 
-        tx.commit();
+        tx.commit();// 提交事务
       } catch (Throwable t) {
-        tx.rollback();
+        tx.rollback();// 回滚事务
         if (t instanceof Error) {
           LOG.error("Error while writing to required channel: " + reqChannel, t);
           throw (Error) t;

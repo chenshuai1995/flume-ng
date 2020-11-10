@@ -58,6 +58,7 @@ public class MultiplexingChannelSelector extends AbstractChannelSelector {
       return defaultChannels;
     }
 
+    // 根据event中的header获取channel
     List<Channel> channels = channelMapping.get(headerValue);
 
     //This header value does not point to anything

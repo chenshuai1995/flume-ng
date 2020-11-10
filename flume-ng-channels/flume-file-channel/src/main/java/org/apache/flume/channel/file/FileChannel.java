@@ -279,7 +279,7 @@ public class FileChannel extends BasicChannelSemantics {
     try {
       Builder builder = createLogBuilder();
       log = builder.build();
-      log.replay();
+      log.replay(); // 日志重放，从checkpoint和文件中读取
       setOpen(true);
 
       int depth = getDepth();
@@ -484,6 +484,7 @@ public class FileChannel extends BasicChannelSemantics {
       return String.valueOf(getState());
     }
 
+    // source把event提交给Channel中的FlumeEventQueue队列
     @Override
     protected void doPut(Event event) throws InterruptedException {
       channelCounter.incrementEventPutAttemptCount();
@@ -524,6 +525,7 @@ public class FileChannel extends BasicChannelSemantics {
       }
     }
 
+    // Sink从Channel中的FlumeEventQueue队列取出event
     @Override
     protected Event doTake() throws InterruptedException {
       channelCounter.incrementEventTakeAttemptCount();
@@ -583,8 +585,8 @@ public class FileChannel extends BasicChannelSemantics {
 
     @Override
     protected void doCommit() throws InterruptedException {
-      int puts = putList.size();
-      int takes = takeList.size();
+      int puts = putList.size();// Source→Channel
+      int takes = takeList.size();// Sink←Channel
       if (puts > 0) {
         Preconditions.checkState(takes == 0, "nonzero puts and takes "
             + channelNameDescriptor);

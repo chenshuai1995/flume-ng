@@ -54,6 +54,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
+// flume agent的启动类
 public class Application {
 
   private static final Logger logger = LoggerFactory
@@ -89,12 +90,14 @@ public class Application {
     }
   }
 
+  // 观察者代码
+  // 重启所有组件，用最新的配置信息
   @Subscribe
   public void handleConfigurationEvent(MaterializedConfiguration conf) {
     try {
       lifecycleLock.lockInterruptibly();
       stopAllComponents();
-      startAllComponents(conf);
+      startAllComponents(conf);// 启动所有组件，配置文件中配置的那些source, channel, sink
     } catch (InterruptedException e) {
       logger.info("Interrupted while trying to handle configuration event");
       return;
@@ -298,7 +301,7 @@ public class Application {
         isZkConfigured = true;
       }
       Application application = null;
-      if (isZkConfigured) {
+      if (isZkConfigured) {// 默认是false，走else下面的逻辑
         // get options
         String zkConnectionStr = commandLine.getOptionValue('z');
         String baseZkPath = commandLine.getOptionValue('p');
@@ -345,12 +348,13 @@ public class Application {
 
         if (reload) {
           EventBus eventBus = new EventBus(agentName + "-event-bus");
+          // 定时30s拉取配置文件中的配置信息
           PollingPropertiesFileConfigurationProvider configurationProvider =
               new PollingPropertiesFileConfigurationProvider(
                   agentName, configurationFile, eventBus, 30);
           components.add(configurationProvider);
           application = new Application(components);
-          eventBus.register(application);
+          eventBus.register(application);// 注册观察者
         } else {
           PropertiesFileConfigurationProvider configurationProvider =
               new PropertiesFileConfigurationProvider(agentName, configurationFile);

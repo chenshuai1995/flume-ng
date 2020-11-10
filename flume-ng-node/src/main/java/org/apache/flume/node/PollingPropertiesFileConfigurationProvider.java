@@ -71,6 +71,7 @@ public class PollingPropertiesFileConfigurationProvider
     FileWatcherRunnable fileWatcherRunnable =
         new FileWatcherRunnable(file, counterGroup);
 
+    // 启动线程池，执行fileWatcher任务，定时30s
     executorService.scheduleWithFixedDelay(fileWatcherRunnable, 0, interval,
         TimeUnit.SECONDS);
 
@@ -142,6 +143,8 @@ public class PollingPropertiesFileConfigurationProvider
         lastChange = lastModified;
 
         try {
+          // 给观察者发布发布消息
+          // 此时会触发Application.handleConfigurationEvent()方法
           eventBus.post(getConfiguration());
         } catch (Exception e) {
           LOGGER.error("Failed to load configuration data. Exception follows.",

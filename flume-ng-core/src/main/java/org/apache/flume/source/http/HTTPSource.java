@@ -183,7 +183,7 @@ public class HTTPSource extends AbstractSource implements
             "Running HTTP Server found in source: " + getName()
             + " before I started one."
             + "Will not attempt to start.");
-    srv = new Server();
+    srv = new Server();// 启动一个jetty容器
 
     // Connector Array
     Connector[] connectors = new Connector[1];
@@ -203,7 +203,7 @@ public class HTTPSource extends AbstractSource implements
 
     connectors[0].setHost(host);
     connectors[0].setPort(port);
-    srv.setConnectors(connectors);
+    srv.setConnectors(connectors);// 一个实例对应一个connector
     try {
       org.mortbay.jetty.servlet.Context root = new org.mortbay.jetty.servlet.Context(
           srv, "/", org.mortbay.jetty.servlet.Context.SESSIONS);
@@ -259,6 +259,7 @@ public class HTTPSource extends AbstractSource implements
       sourceCounter.incrementAppendBatchReceivedCount();
       sourceCounter.addToEventReceivedCount(events.size());
       try {
+        // 调用Channel处理events
         getChannelProcessor().processEventBatch(events);
       } catch (ChannelException ex) {
         LOG.warn("Error appending event to channel. "
